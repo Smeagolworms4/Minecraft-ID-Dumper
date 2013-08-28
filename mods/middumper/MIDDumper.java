@@ -3,33 +3,25 @@ package mods.middumper;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.logging.FileHandler;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import java.util.logging.SimpleFormatter;
 
-import cpw.mods.fml.common.registry.LanguageRegistry;
-
+import net.minecraft.block.Block;
+import net.minecraft.client.Minecraft;
+import net.minecraft.item.Item;
 import sharose.mods.guiapi.GuiApiHelper;
 import sharose.mods.guiapi.GuiModScreen;
 import sharose.mods.guiapi.ModSettingScreen;
 import sharose.mods.guiapi.ModSettings;
-import net.minecraft.block.Block;
-import net.minecraft.client.Minecraft;
-import net.minecraft.item.Item;
-import net.minecraft.src.BaseMod;
+import cpw.mods.fml.common.Mod;
+import cpw.mods.fml.common.Mod.Init;
+import cpw.mods.fml.common.event.FMLInitializationEvent;
 
 /**
- * This is the BASIC example of GuiAPI usage. We are going to create a
- * ModSettings object, and use the 'easy' way of getting settings. Note, the
- * easy was is slower than the intermediate way of doing things, so if you are
- * getting your setting values several times a second you might want to read
- * that after this tutorial. As well, this tutorial will show you some usage of
- * the 'makeButton' and 'showTextDisplay' method in the GuiApiHelper class.
+ * This mod is an id dumper for minecraft
  * 
- * @author ShaRose
+ * @author Damien Duboeuf <Smeagolworms4>
  */
-public class mod_MIDDumper extends BaseMod {
+@Mod(name = "Minecraft ID Dumper", modid = "MIDDumper", version = "1.0.1", acceptedMinecraftVersions = "1.5.2", useMetadata = true)
+public class MIDDumper {
 	
 	FileWriter fileOut;
 	
@@ -38,27 +30,41 @@ public class mod_MIDDumper extends BaseMod {
 	/** The settings. */
 	public ModSettings mySettings;
 	
-	@Override
-	public String getVersion() {
-		return "1.0";
+	@Init
+	public void load (FMLInitializationEvent event) {
+		
+		VersionChecker vchecker = VersionChecker.getInstance();
+		vchecker.setMod (this);
+		vchecker.check ();
+		
+		mySettings = new ModSettings("MIDDumper");
+		myModScreen = new ModSettingScreen("Minecraft ID Dumper");
+		myModScreen.append(GuiApiHelper.makeButton("Dump all ID to TXT", "dumpID_TXT", this, true));
+		myModScreen.append(GuiApiHelper.makeButton("Dump all ID to CSV", "dumpID_CSV", this, true));
+		mySettings.load();
 	}
 
-	@Override
-	public void load() {
-		
-		mySettings = new ModSettings("mod_MIDDumper");
-		myModScreen = new ModSettingScreen("Minecraft ID Dumper");
-		myModScreen.append(GuiApiHelper.makeButton("Dump All ID to TXT", "dumpID_TXT", this, true));
-		myModScreen.append(GuiApiHelper.makeButton("Dump All ID to CSV", "dumpID_CSV", this, true));
-		mySettings.load();
+	/**
+	 * Applique un str_pad à droite d'un element
+	 * @param String s
+	 * @param int n
+	 * @return String
+	 */
+	public static String padRight(String s, int n) {
+	     return String.format("%1$-" + n + "s", s);  
 	}
 	
 	/**
+	 * @param File file
 	 * @param String s
 	 * @throws IOException
 	 */
-	private void write (String s) throws IOException {
+	private void write (File file, String s) throws IOException {
+		
+		FileWriter fileOut = new FileWriter (file);
 		fileOut.write (s+"\n");
+		fileOut.close ();
+		
 		System.out.println (s);
 	}
 	
@@ -74,40 +80,40 @@ public class mod_MIDDumper extends BaseMod {
 		
 		StringBuilder displayTextBuilder = new StringBuilder();
 		File fileRead = new File (Minecraft.getMinecraftDir(), "Export all id.csv");
-		
-		System.out.println ("");
-		System.out.println ("");
-		System.out.println ("===================================================");
+		String dump = "";
 		
 		try {
-			fileOut = new FileWriter (fileRead);
 			
-			write ("\"Block list : \";;;;;");
+			dump += "\"Block list : \";;;;;";
 			
 			int oldId = 0;
 			for (Block b : Block.blocksList) {
 				if (b != null && b.blockID != 0) {
 					if (oldId != 0 && oldId != b.blockID-1) {
-						write ("\"Empty : \";\""+oldId+"\";\""+(b.blockID-1)+"\";;;");
+						dump += "\"Empty : \";\""+oldId+"\";\""+(b.blockID-1)+"\";;;";
 					}
 					oldId = b.blockID;
-					write ("\""+b.blockID+"\";\""+b.getUnlocalizedName ()+"\";\""+b.toString().replaceAll("^[\\p{Alnum}]*", "_")+"\";;;");
+					dump += "\""+b.blockID+"\";\""+b.getUnlocalizedName ()+"\";\""+b.toString().replaceAll("^[\\p{Alnum}]*", "_")+"\";;;";
 				}
 			}
 			
-			write ("\"Item list : \";;;;;");
+			dump += "\"Item list : \";;;;;";
 			
 			oldId = 0;
 			for (Item i : Item.itemsList) {
 				if (i != null && i.itemID != 0) {
 					if (oldId != 0 && oldId != i.itemID-1) {
-						write ("\"Empty : \";\""+oldId+"\";\""+(i.itemID-1)+"\";;;");
+						dump += "\"Empty : \";\""+oldId+"\";\""+(i.itemID-1)+"\";;;";
 					}
 					oldId = i.itemID;
-					write ("\""+i.itemID+"\";\""+i.getUnlocalizedName ()+"\";\""+(i.toString().replaceAll("^[\\p{Alnum}]*", "_"))+"\";;;");
+					dump += "\""+i.itemID+"\";\""+i.getUnlocalizedName ()+"\";\""+(i.toString().replaceAll("^[\\p{Alnum}]*", "_"))+"\";;;";
 				}
 			}
 			
+			System.out.println ("");
+			System.out.println ("");
+			System.out.println ("===================================================");
+			write (fileRead, dump);
 			System.out.println ("===================================================");
 			System.out.println ("");
 			
@@ -126,10 +132,6 @@ public class mod_MIDDumper extends BaseMod {
 		
 	}
 	
-	public static String padRight(String s, int n) {
-	     return String.format("%1$-" + n + "s", s);  
-	}
-	
 	/**
 	 * This is the method that will be called if you press the
 	 * "Display Settings" button. It doesn't have to be public, so you can make
@@ -142,47 +144,46 @@ public class mod_MIDDumper extends BaseMod {
 		
 		StringBuilder displayTextBuilder = new StringBuilder();
 		File fileRead = new File (Minecraft.getMinecraftDir(), "Export all id.txt");
-		
+		String dump = "";
 		
 		try {
-			fileOut = new FileWriter (fileRead);
 
-			write ("\n\n===================================================");
-			write ("Block list :");
-			write ("===================================================\n");
+			dump += "\n\n===================================================";
+			dump += "Block list :";
+			dump += "===================================================\n";
 			
 			int oldId = 0;
 			for (Block b : Block.blocksList) {
 				if (b != null && b.blockID != 0) {
 					if (oldId != 0 && oldId != b.blockID-1) {
-						write ("\nEmpty : "+oldId+" - "+(b.blockID-1)+"\n");
+						dump += "\nEmpty : "+oldId+" - "+(b.blockID-1)+"\n";
 					}
 					oldId = b.blockID;
-					write (padRight (""+b.blockID, 10) + ": "+padRight (b.getUnlocalizedName (), 35)+": "+padRight (b.toString().replaceAll("^[\\p{Alnum}]*", "_"), 60));
+					dump += padRight (""+b.blockID, 10) + ": "+padRight (b.getUnlocalizedName (), 35)+": "+padRight (b.toString().replaceAll("^[\\p{Alnum}]*", "_"), 60);
 				}
 			}
 	
-			write ("\n\n===================================================");
-			write ("Item list :");
-			write ("===================================================\n");
+			dump += "\n\n===================================================";
+			dump += "Item list :";
+			dump += "===================================================\n";
 			
 			oldId = 0;
 			for (Item i : Item.itemsList) {
 				if (i != null && i.itemID != 0) {
 					if (oldId != 0 && oldId != i.itemID-1) {
-						write ("\nEmpty : "+oldId+" - "+(i.itemID-1)+""+"\n");
+						dump += "\nEmpty : "+oldId+" - "+(i.itemID-1)+""+"\n";
 					}
 					oldId = i.itemID;
-					write (padRight (""+i.itemID, 10) + ": "+padRight (i.getUnlocalizedName (), 35)+": "+padRight (i.toString().replaceAll("^[\\p{Alnum}]*", "_"), 60));
+					dump += padRight (""+i.itemID, 10) + ": "+padRight (i.getUnlocalizedName (), 35)+": "+padRight (i.toString().replaceAll("^[\\p{Alnum}]*", "_"), 60);
 				}
 			}
 			
+			write (fileRead, dump);
 			System.out.println ("===================================================");
 			System.out.println ("");
 			
 			displayTextBuilder.append("Export : " + fileRead.getAbsolutePath());
 			
-			fileOut.close ();
 			
 		} catch (Exception e) {
 			displayTextBuilder.append("Error : " + e.getMessage());
@@ -195,5 +196,4 @@ public class mod_MIDDumper extends BaseMod {
 		);
 		
 	}
-	
 }
