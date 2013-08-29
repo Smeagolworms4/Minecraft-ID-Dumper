@@ -34,8 +34,7 @@ public class MIDDumper {
 	public void load (FMLInitializationEvent event) {
 		
 		VersionChecker vchecker = VersionChecker.getInstance();
-		vchecker.setMod (this);
-		vchecker.check ();
+		vchecker.check (this);
 		
 		mySettings = new ModSettings("MIDDumper");
 		myModScreen = new ModSettingScreen("Minecraft ID Dumper");
